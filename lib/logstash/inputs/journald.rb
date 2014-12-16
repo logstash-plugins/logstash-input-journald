@@ -32,6 +32,10 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     #
     config :filter, :validate => :hash, :required => false, :default => {}
 
+    # Filter logs since the system booted (only relevant with seekto => "head")
+    #
+    config :thisboot, :validate => :boolean, :default => true
+
     # Lowercase annoying UPPERCASE fieldnames. (May clobber existing fields)
     #
     config :lowercase, :validate => :boolean, :default => false
@@ -44,6 +48,9 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
         }
         @hostname = Socket.gethostname
         @journal = Systemd::Journal.new(opts)
+        if @thisboot
+            @filter[:_boot_id] = Systemd::Id128.boot_id
+        end
     end
 
     def run(queue)
@@ -64,7 +71,7 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     end # def run
 
     public
-    def teardown
+    def teardown # FIXME: doesn't really seem to work...
         @logger.debug("journald shutting down.")
         @journal = nil
         finished
