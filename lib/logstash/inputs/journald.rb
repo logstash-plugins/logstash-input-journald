@@ -84,9 +84,9 @@ module Systemd
     class JournalEntry
         def to_h_lower(is_lowercase)
             if is_lowercase
-                @entry.each_with_object({}) { |(k, v), h| h[k.downcase] = v.dup }
+                @entry.each_with_object({}) { |(k, v), h| h[k.downcase] = v.dup.force_encoding('iso-8859-1').encode('utf-8') }
             else
-                @entry.each_with_object({}) { |(k, v), h| h[k] = v.dup }
+                @entry.each_with_object({}) { |(k, v), h| h[k] = v.dup.force_encoding('iso-8859-1').encode('utf-8') }
             end
         end
     end
