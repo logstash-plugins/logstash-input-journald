@@ -5,8 +5,8 @@ Gem::Specification.new do |s|
   s.licenses        = ['Apache License (2.0)']
   s.summary         = "Read events from local systemd journal"
   s.description     = "This gem is a logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/plugin install gemname. This gem is not a stand-alone program"
-  s.authors         = ["Elasticsearch"]
-  s.email           = 'info@elasticsearch.com'
+  s.authors         = ["stuart-warren"]
+  s.email           = 'stuart.warren@ocado.com'
   s.homepage        = "http://www.elasticsearch.org/guide/en/logstash/current/index.html"
   s.require_paths = ["lib"]
 
