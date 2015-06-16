@@ -29,7 +29,13 @@ cd logstash-input-journald
 gem build logstash-input-journald.gemspec
 sudo /path/to/logstash/bin/plugin install /path/to/git/logstash-input-journald/logstash-input-journald-0.0.1.gem
 ```
+Sincedb
+----
 
+This plugin creates a sincedb in your home, called .sincedb\_journal.
+It automatically stores the cursor to the journal there, so when you restart logstash, only new messages are read.
+When executing the plugin the second time (which means the sincedb exists), ``seekto``, and ``thisboot`` are ignored.
+If you don't want the sincedb, configure it's path to /dev/null.
 Tips
 ----
 
