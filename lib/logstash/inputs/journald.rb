@@ -59,7 +59,7 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
         }
         @hostname = Socket.gethostname
         @journal = Systemd::Journal.new(opts)
-        @cursor = nil
+        @cursor = ""
         @written_cursor = ""
         @cursor_lock = Mutex.new
         if @thisboot
@@ -99,7 +99,7 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     end # def register
 
     def run(queue)
-        if @cursor.to_s.empty?
+        if @cursor.strip.length == 0
             @journal.seek(@seekto.to_sym)
             @journal.filter(@filter)
         else
