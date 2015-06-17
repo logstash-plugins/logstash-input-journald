@@ -72,7 +72,7 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
                               "HOME or SINCEDB_DIR in your environment, or set sincedb_path in " \
                               "in your Logstash config for the file input with " \
                               "path '#{@path.inspect}'")
-                raise # TODO How do I fail properly?
+                raise(LogStash::ConfigurationError, "Sincedb can not be created.")
             end
             sincedb_dir = ENV["SINCEDB_DIR"] || ENV["HOME"]
             @sincedb_path = File.join(sincedb_dir, ".sincedb_journal")
