@@ -125,6 +125,8 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
 
     public
     def teardown # FIXME: doesn't really seem to work...
+        return finished unless @journal # Ignore multiple calls
+
         @logger.debug("journald shutting down.")
         @journal = nil
         Thread.kill(@sincedb_writer)
