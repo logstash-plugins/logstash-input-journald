@@ -11,6 +11,7 @@ require "fileutils" # For touch
 class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
 
     config_name "journald"
+    milestone 1
 
     # Where in the journal to start capturing logs
     # Options: head, tail
