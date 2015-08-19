@@ -101,6 +101,15 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     def run(queue)
         if @cursor.strip.length == 0
             @journal.seek(@seekto.to_sym)
+
+            # We must make one movement in order for the journal C api or else
+            # the @journal.watch call will start from the beginning of the
+            # journal. see:
+            # https://github.com/ledbettj/systemd-journal/issues/55
+            if @seekto == 'tail'
+              @journal.move_previous
+            end
+
             @journal.filter(@filter)
         else
             @journal.seek(@cursor)
