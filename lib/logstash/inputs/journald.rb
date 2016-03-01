@@ -51,6 +51,11 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     #
     config :sincedb_write_interval, :validate => :number, :default => 15
 
+    # The max timeout in microsends to wait for new events from the journal.
+    # Set to -1 to wait indefinitely. Setting this to a large value will
+    # result in delayed shutdown of the plugin.
+    config :wait_timeout, :validate => :number, :default => 3000000
+
     public
     def register
         opts = {
@@ -115,7 +120,8 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
             @journal.seek(@cursor)
             @journal.move_next # Without this, the last event will be read again
         end
-        @journal.watch do |entry|
+
+        watch_journal do |entry|
             timestamp = entry.realtime_timestamp
             event = LogStash::Event.new(
                 entry.to_h_lower(@lowercase).merge(
@@ -133,9 +139,7 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     end # def run
 
     public
-    def teardown # FIXME: doesn't really seem to work...
-        return finished unless @journal # Ignore multiple calls
-
+    def close # FIXME: doesn't really seem to work...
         @logger.debug("journald shutting down.")
         @journal = nil
         Thread.kill(@sincedb_writer)
@@ -144,9 +148,16 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
         file.puts @cursor
         file.close
         @cursor = nil
-        finished
-    end # def teardown
+    end # def close
 
+    private
+    def watch_journal
+        until stop?
+            if @journal.wait(@wait_timeout)
+                yield @journal.current_entry while !stop? && @journal.move_next
+            end
+        end
+    end # def watch_journal
 end # class LogStash::Inputs::Journald
 
 # Monkey patch Systemd::JournalEntry
