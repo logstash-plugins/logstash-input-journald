@@ -23,12 +23,20 @@ output {
 
 Install with
 ------------
+
+From source
 ```
-git clone https://github.com/stuart-warren/logstash-input-journald.git
+git clone https://github.com/logstash-plugins/logstash-input-journald.git
 cd logstash-input-journald
 gem build logstash-input-journald.gemspec
-sudo /path/to/logstash/bin/plugin install /path/to/git/logstash-input-journald/logstash-input-journald-0.0.1.gem
+sudo /path/to/logstash/bin/plugin install /path/to/git/logstash-input-journald/logstash-input-journald-*.gem
 ```
+
+From rubygems
+```
+sudo /path/to/logstash/bin/plugin install logstash-input-journald
+```
+
 Sincedb
 ----
 
