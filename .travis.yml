@@ -1,0 +1,9 @@
+sudo: false
+language: ruby
+cache: bundler
+rvm:
+  - jruby-1.7.24
+jdk:
+  - oraclejdk8
+script:
+  - bundle exec rspec spec --order rand
