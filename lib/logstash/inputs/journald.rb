@@ -4,6 +4,7 @@ require "logstash/namespace"
 require "socket"
 require "systemd/journal"
 require "fileutils" # For touch
+require "base64"
 
 # Pull events from a local systemd journal.
 #
@@ -165,9 +166,23 @@ module Systemd
     class JournalEntry
         def to_h_lower(is_lowercase)
             if is_lowercase
-                @entry.each_with_object({}) { |(k, v), h| h[k.downcase] = v.dup.force_encoding('iso-8859-1').encode('utf-8') }
+                @entry.each_with_object({}) { |(k, v), h| h[k.downcase] = decode_value(v.dup) }
             else
-                @entry.each_with_object({}) { |(k, v), h| h[k] = v.dup.force_encoding('iso-8859-1').encode('utf-8') }
+                @entry.each_with_object({}) { |(k, v), h| h[k] = decode_value(v.dup) }
+            end
+        end
+		
+        # Field values are returned as binary (ASCII-8BIT) by the journal API.
+        # The officially recommended encoding is UTF-8, so trying that.
+        # If the result is not valid, using base64 representation instead.
+        # (see https://www.freedesktop.org/software/systemd/man/sd_journal_print.html#Description)
+        private
+        def decode_value(value)
+            value_utf8 = value.force_encoding('utf-8')
+            if value_utf8.valid_encoding?
+                value_utf8
+            else
+                Base64.encode64(value)
             end
         end
     end
