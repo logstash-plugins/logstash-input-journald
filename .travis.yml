@@ -1,9 +1,12 @@
-sudo: false
+sudo: true
 jdk:
  - oraclejdk8
 language: ruby
 cache: bundler
 rvm:
  - jruby-1.7.25
+before_script:
+ - sudo apt-get update
+ - sudo apt-get install libsystemd-journal0
 script:
  - bundle exec rspec spec
