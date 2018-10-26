@@ -27,6 +27,6 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'logstash-codec-json'
   s.add_runtime_dependency 'logstash-codec-json_lines'
   s.add_runtime_dependency 'ffi'
-  s.add_runtime_dependency 'systemd-journal', '~> 1.2.2'
+  s.add_runtime_dependency 'systemd-journal', '>= 1.3'
   s.add_development_dependency 'logstash-devutils'
 end
