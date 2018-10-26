@@ -44,6 +44,13 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     #
     config :clean_field_names, :validate => :boolean, :default => false
 
+    # Store all the fields of the Systemd Journal entry under this field
+    # message is kept under top level
+    # Can be almost any string suitable to be a field name of an ElasticSearch document.
+    #  - no trailing dots, e.g. "journal..field_name." will fail
+    # (defaults to "" hence stores on the upper level of the event)
+    config :move_metadata_to_field, :validate => :string, :default => ""
+
     # Where to write the sincedb database (keeps track of the current
     # position of the journal). The default will write
     # the sincedb file to matching `$HOME/.sincedb_journal`
@@ -127,9 +134,19 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
 
         watch_journal do |entry|
             timestamp = entry.realtime_timestamp
-            target = clean_entry_fields(entry)
+	    if @move_metadata_to_field.empty?
+            then
+              result = clean_entry_fields(entry)
+            else
+              result = {@move_metadata_to_field => clean_entry_fields(entry)}
+	      unless result[@move_metadata_to_field][clean_key('MESSAGE')].nil?
+	      then
+	          result["message"] = result[@move_metadata_to_field][clean_key 'MESSAGE']
+		  result[@move_metadata_to_field].delete clean_key 'MESSAGE'
+	      end
+            end
             event = LogStash::Event.new(
-                target.merge(
+                result.merge(
                     "@timestamp" => timestamp,
                     "host" => entry._hostname || @hostname,
                     "cursor" => @journal.cursor
@@ -164,15 +181,19 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
         end
     end # def watch_journal
 
+    def clean_key(key)
+        if @clean_field_names
+        then
+          return key.downcase.sub(/^_*/,'')
+        else
+          return key
+        end
+    end # def clean_key
+
     # entry conversion
     def clean_entry_fields(entry)
         entry.each_with_object({}) { |(k, v), h|
-             if k[0] == '_'
-	     then
-		 h[k.downcase.sub /^_*/, ''] = decode_value(v.dup)
-	     else
-                 h[k.downcase] = decode_value(v.dup)
-	     end
+             h[clean_key(k)] = decode_value(v.dup)
            }
     end # def clean_entry_fields
 
