@@ -37,9 +37,19 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     #
     config :thisboot, :validate => :boolean, :default => true
 
-    # Lowercase annoying UPPERCASE fieldnames. (May clobber existing fields)
+    # Lowercase annoying UPPERCASE fieldnames, remove underscore prefixes. (May clobber existing fields)
+    # - lowercase all fields (seriously, who wants to type caps all day?!?)
+    # - remove underscores from the beginning of fields as they are reserved in
+    #   ElasticSearch for metadata information
     #
-    config :lowercase, :validate => :boolean, :default => false
+    config :clean_field_names, :validate => :boolean, :default => false
+
+    # Store all the fields of the Systemd Journal entry under this field
+    # message is kept under top level
+    # Can be almost any string suitable to be a field name of an ElasticSearch document.
+    #  - no trailing dots, e.g. "journal..field_name." will fail
+    # (defaults to "" hence stores on the upper level of the event)
+    config :move_metadata_to_field, :validate => :string, :default => ""
 
     # Where to write the sincedb database (keeps track of the current
     # position of the journal). The default will write
@@ -124,8 +134,19 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
 
         watch_journal do |entry|
             timestamp = entry.realtime_timestamp
+	    if @move_metadata_to_field.empty?
+            then
+              result = clean_entry_fields(entry)
+            else
+              result = {@move_metadata_to_field => clean_entry_fields(entry)}
+	      unless result[@move_metadata_to_field][clean_key('MESSAGE')].nil?
+	      then
+	          result["message"] = result[@move_metadata_to_field][clean_key 'MESSAGE']
+		  result[@move_metadata_to_field].delete clean_key 'MESSAGE'
+	      end
+            end
             event = LogStash::Event.new(
-                entry.to_h_lower(@lowercase).merge(
+                result.merge(
                     "@timestamp" => timestamp,
                     "host" => entry._hostname || @hostname,
                     "cursor" => @journal.cursor
@@ -165,31 +186,34 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
             end
         end
     end # def watch_journal
-end # class LogStash::Inputs::Journald
 
-# Monkey patch Systemd::JournalEntry
-module Systemd
-    class JournalEntry
-        def to_h_lower(is_lowercase)
-            if is_lowercase
-                @entry.each_with_object({}) { |(k, v), h| h[k.downcase] = decode_value(v.dup) }
-            else
-                @entry.each_with_object({}) { |(k, v), h| h[k] = decode_value(v.dup) }
-            end
+    def clean_key(key)
+        if @clean_field_names
+        then
+          return key.downcase.sub(/^_*/,'')
+        else
+          return key
         end
-		
-        # Field values are returned as binary (ASCII-8BIT) by the journal API.
-        # The officially recommended encoding is UTF-8, so trying that.
-        # If the result is not valid, using base64 representation instead.
-        # (see https://www.freedesktop.org/software/systemd/man/sd_journal_print.html#Description)
-        private
-        def decode_value(value)
-            value_utf8 = value.force_encoding('utf-8')
-            if value_utf8.valid_encoding?
-                value_utf8
-            else
-                Base64.encode64(value)
-            end
+    end # def clean_key
+
+    # entry conversion
+    def clean_entry_fields(entry)
+        entry.each_with_object({}) { |(k, v), h|
+             h[clean_key(k)] = decode_value(v.dup)
+           }
+    end # def clean_entry_fields
+
+    # Field values are returned as binary (ASCII-8BIT) by the journal API.
+    # The officially recommended encoding is UTF-8, so trying that.
+    # If the result is not valid, using base64 representation instead.
+    # (see https://www.freedesktop.org/software/systemd/man/sd_journal_print.html#Description)
+    private
+    def decode_value(value)
+        value_utf8 = value.force_encoding('utf-8')
+        if value_utf8.valid_encoding?
+            value_utf8
+        else
+            Base64.encode64(value)
         end
-    end
-end
+    end # def decode_value
+end # class LogStash::Inputs::Journald
