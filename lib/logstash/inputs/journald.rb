@@ -116,12 +116,13 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
               @journal.move_previous
             end
 
-            @journal.filter(@filter)
         else
             @journal.seek(@cursor)
             @journal.move_next # Without this, the last event will be read again
         end
-
+	
+	@journal.filter(@filter)
+	
         watch_journal do |entry|
             timestamp = entry.realtime_timestamp
             event = LogStash::Event.new(
