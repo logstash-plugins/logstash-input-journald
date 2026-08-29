@@ -155,7 +155,13 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     def watch_journal
         until stop?
             if @journal.wait(@wait_timeout)
-                yield @journal.current_entry while !stop? && @journal.move_next
+                while !stop? && @journal.move_next
+                    begin
+                        yield @journal.current_entry
+                    rescue => error
+                        @logger.error("Unable to read journald message skipping: #{error.message}")
+                    end
+                end
             end
         end
     end # def watch_journal
